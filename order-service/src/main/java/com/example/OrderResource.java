@@ -2,13 +2,21 @@ package com.example;
 
 import org.eclipse.microprofile.lra.annotation.Compensate;
 import org.eclipse.microprofile.lra.annotation.ws.rs.LRA;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 import io.smallrye.mutiny.Uni;
 
+import com.example.client.PaymentClient;
+
 @Path("/order")
 public class OrderResource {
+
+    @Inject
+    @RestClient
+    PaymentClient paymentClient;
 
     @POST
     @LRA(value = LRA.Type.REQUIRED)
@@ -27,7 +35,8 @@ public class OrderResource {
     }
 
     private Uni<Boolean> callPaymentService(String lraId) {
-        return Uni.createFrom().item(true);
+        return Uni.createFrom().item(() -> paymentClient.pay(lraId))
+                .onItem().transform(resp -> resp.getStatus() == 200);
     }
 
     private Uni<Boolean> revertOrder(String lraId) {
